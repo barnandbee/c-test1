@@ -32,9 +32,11 @@
     spread = spread || Math.max(2, Math.round(Math.abs(answer) * 0.4) + 2);
     const set = new Set([answer]);
     let guard = 0;
-    while (set.size < count && guard < 200) {
+    while (set.size < count && guard < 400) {
       guard++;
-      let delta = randInt(-spread, spread);
+      // widen the spread if we're struggling to find enough unique options
+      const s = spread + Math.floor(guard / 40);
+      let delta = randInt(-s, s);
       if (delta === 0) continue;
       const candidate = answer + delta;
       if (candidate < 0 && answer >= 0) continue; // avoid negatives when answer is non-negative

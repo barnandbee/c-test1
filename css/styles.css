@@ -28,11 +28,12 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Josefin Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: var(--ink);
   background: var(--bg);
   line-height: 1.5;
-  font-size: 17px;
+  /* Josefin Sans has a small x-height, so nudge the base size up for legibility */
+  font-size: 18px;
 }
 
 h1, h2, h3 { line-height: 1.2; }
@@ -228,6 +229,17 @@ h1, h2, h3 { line-height: 1.2; }
   display: inline-grid; place-items: center; width: 34px; height: 34px;
   background: var(--blue-10); border-radius: 50%; font-size: 1.1rem;
 }
+.level-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
+.level-tag {
+  font-weight: 700; color: #fff; background: var(--blue);
+  padding: 4px 12px; border-radius: 999px; font-size: .9rem;
+}
+.level-note { font-size: .85rem; }
+.fb-level {
+  display: inline-block; margin-left: 8px; font-weight: 700; font-size: .85rem;
+  color: var(--ink); background: var(--blue-10); padding: 2px 8px; border-radius: 999px;
+}
+
 .round-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .game-name { font-size: 1.25rem; margin: 0; }
 .dots { display: flex; gap: 6px; }

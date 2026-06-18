@@ -8,6 +8,11 @@ No build step, no dependencies: just open `index.html` in a browser.
 
 - **20 games** (5 per category), each procedurally randomised so no two plays
   are identical.
+- **Adaptive difficulty** — every game starts a notch above trivial and each
+  game scales with a difficulty *level*. Answer correctly and the next question
+  gets harder; slip up and it eases back by one level. The current level is
+  shown while you play, and the top level you reached is recorded with each
+  result.
 - **Daily workout** — one random game from each of the four categories, giving
   an **overall daily score** out of 100.
 - **Dashboard** with a progress graph of daily scores over time, plus a day
@@ -21,6 +26,8 @@ No build step, no dependencies: just open `index.html` in a browser.
 
 ## Design
 
+- **Font:** [Josefin Sans](https://fonts.google.com/specimen/Josefin+Sans)
+  (Google Fonts), with a system-font fallback if offline.
 - **Four-colour palette** only: white, ink (navy `#0B2545`), blue (`#1565C0`)
   and sun/amber (`#C77E22`). Tints used are opacity variations of these hues.
 - **WCAG AA compliant**: verified contrast ratios (ink-on-white ≈16:1,

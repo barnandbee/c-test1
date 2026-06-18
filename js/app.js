@@ -7,7 +7,7 @@
   const app = document.getElementById('app');
   const nav = document.getElementById('topnav');
   const live = document.getElementById('sr-live');
-  const { CATEGORIES, ROUNDS_PER_GAME } = GAMES;
+  const { CATEGORIES, ROUNDS_PER_GAME, START_LEVEL } = GAMES;
   const CAT_ORDER = ['geometric', 'mathematical', 'verbal', 'logical'];
 
   function announce(msg) { live.textContent = ''; setTimeout(() => { live.textContent = msg; }, 30); }
@@ -152,7 +152,7 @@
   function logRow(h) {
     return `<li class="log-row">
       <span class="log-ico" aria-hidden="true">${CATEGORIES[h.category].icon}</span>
-      <span class="log-main"><b>${U.esc(h.gameName)}</b><span class="muted">${CATEGORIES[h.category].label} · ${U.formatDate(h.date)}</span></span>
+      <span class="log-main"><b>${U.esc(h.gameName)}</b><span class="muted">${CATEGORIES[h.category].label} · ${U.formatDate(h.date)}${h.topLevel ? ` · level ${h.topLevel}` : ''}</span></span>
       <span class="log-score" aria-label="score ${h.score} of 100">${h.score}</span>
     </li>`;
   }
@@ -227,7 +227,8 @@
       const date = U.todayKey();
       results.forEach(r => Store.logGame({
         ts, date, category: r.game.category, gameId: r.game.id,
-        gameName: r.game.name, score: r.score, correct: r.correct, total: r.total
+        gameName: r.game.name, score: r.score, correct: r.correct, total: r.total,
+        topLevel: r.topLevel
       }));
       if (mode === 'workout') {
         const scores = {};
@@ -243,11 +244,12 @@
     nextGame();
   }
 
-  // Run a single game's rounds, callback with {game, score, correct, total}
+  // Run a single game's rounds, callback with {game, score, correct, total, topLevel}
   function playGame(game, index, count, mode, done) {
-    const rounds = [];
-    for (let i = 0; i < ROUNDS_PER_GAME; i++) rounds.push(game.makeRound());
     let ri = 0, correct = 0;
+    let level = START_LEVEL;   // adaptive: climbs on a correct answer, eases on a wrong one
+    let topLevel = level;      // highest level the player reached
+    let round = null;          // current round, generated on the fly at `level`
 
     function header() {
       if (mode === 'workout') {
@@ -260,12 +262,12 @@
     }
 
     function showRound() {
-      if (ri >= rounds.length) {
-        const score = Math.round(correct / rounds.length * 100);
-        return done({ game, score, correct, total: rounds.length });
+      if (ri >= ROUNDS_PER_GAME) {
+        const score = Math.round(correct / ROUNDS_PER_GAME * 100);
+        return done({ game, score, correct, total: ROUNDS_PER_GAME, topLevel });
       }
-      const r = rounds[ri];
-      const dots = rounds.map((_, i) =>
+      const r = round = game.makeRound(level);
+      const dots = Array.from({ length: ROUNDS_PER_GAME }, (_, i) =>
         `<span class="dot ${i < ri ? 'done' : i === ri ? 'now' : ''}"></span>`).join('');
 
       app.innerHTML = `
@@ -273,7 +275,11 @@
           ${header()}
           <div class="round-meta">
             <h2 class="game-name">${U.esc(game.name)}</h2>
-            <div class="dots" aria-label="Round ${ri + 1} of ${rounds.length}">${dots}</div>
+            <div class="dots" aria-label="Round ${ri + 1} of ${ROUNDS_PER_GAME}">${dots}</div>
+          </div>
+          <div class="level-bar">
+            <span class="level-tag" aria-label="Difficulty level ${level}">Level ${level}</span>
+            <span class="level-note muted">Get it right and the next one gets harder.</span>
           </div>
           <div class="card q-card">
             <p id="q-h" class="prompt">${U.esc(r.prompt)}</p>
@@ -321,7 +327,17 @@
     }
 
     function grade(ok, r, area, btn) {
-      if (ok) correct++;
+      // adaptive step: harder after a correct answer, a notch easier after a wrong one
+      let levelMsg = '';
+      if (ok) {
+        correct++;
+        topLevel = Math.max(topLevel, level);
+        level = level + 1;
+        levelMsg = ` Level up — next question is level ${level}.`;
+      } else if (level > 1) {
+        level = level - 1;
+        levelMsg = ` Difficulty eased to level ${level}.`;
+      }
       // lock inputs
       area.querySelectorAll('button, input').forEach(el => el.disabled = true);
       if (btn) {
@@ -333,12 +349,13 @@
           if (right) right.classList.add('correct');
         }
       }
+      const last = ri === ROUNDS_PER_GAME - 1;
       const fb = document.getElementById('feedback');
       fb.innerHTML = `
         <span class="fb-mark ${ok ? 'ok' : 'no'}" aria-hidden="true">${ok ? '✓' : '✗'}</span>
-        <span><b>${ok ? 'Correct' : 'Not quite'}.</b> ${r.explain ? U.esc(r.explain) : ''}</span>
-        <button class="btn btn-primary fb-next" id="next-round">${ri < rounds.length - 1 ? 'Next' : 'Finish game'} →</button>`;
-      announce(`${ok ? 'Correct' : 'Not quite'}. ${r.explain || ''}`);
+        <span><b>${ok ? 'Correct' : 'Not quite'}.</b> ${r.explain ? U.esc(r.explain) : ''}${last ? '' : `<span class="fb-level">${ok ? '▲ Harder next' : '▼ Easier next'}</span>`}</span>
+        <button class="btn btn-primary fb-next" id="next-round">${last ? 'Finish game' : 'Next'} →</button>`;
+      announce(`${ok ? 'Correct' : 'Not quite'}. ${r.explain || ''}${last ? '' : levelMsg}`);
       const nb = document.getElementById('next-round');
       nb.focus();
       nb.addEventListener('click', () => { ri++; showRound(); });
@@ -360,7 +377,7 @@
           ${results.map(r => `
             <li>
               <span class="log-ico" aria-hidden="true">${CATEGORIES[r.game.category].icon}</span>
-              <span class="log-main"><b>${U.esc(r.game.name)}</b><span class="muted">${CATEGORIES[r.game.category].label}</span></span>
+              <span class="log-main"><b>${U.esc(r.game.name)}</b><span class="muted">${CATEGORIES[r.game.category].label} · reached level ${r.topLevel}</span></span>
               <span class="log-score">${r.score}</span>
             </li>`).join('')}
         </ul>
@@ -377,7 +394,7 @@
         <div class="ring big" style="--p:${r.score}">
           <span class="ring-num">${r.score}</span><span class="ring-max">/100</span>
         </div>
-        <p class="result-word">${r.correct} of ${r.total} correct · ${scoreWord(r.score)}!</p>
+        <p class="result-word">${r.correct} of ${r.total} correct · reached level ${r.topLevel} · ${scoreWord(r.score)}!</p>
         <div class="action-row">
           <button class="btn btn-primary" id="again">Play another</button>
           <button class="btn btn-ghost" id="res-done">Dashboard</button>
